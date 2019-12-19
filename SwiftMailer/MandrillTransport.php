@@ -11,6 +11,7 @@ use \Swift_Mime_SimpleMessage;
 use \Swift_Transport;
 use \Swift_Attachment;
 use \Swift_MimePart;
+use Psr\Log\LoggerInterface;
 
 class MandrillTransport implements Swift_Transport
 {
@@ -39,6 +40,11 @@ class MandrillTransport implements Swift_Transport
      * @var string|null
      */
     protected $subAccount;
+
+    /**
+     * @var LoggerInterface
+     */
+    protected $logger;
 
     /**
      * @param Swift_Events_EventDispatcher $dispatcher
@@ -73,9 +79,9 @@ class MandrillTransport implements Swift_Transport
     {
     }
 
-	/**
-	 * Not used
-	 */
+    /**
+     * Not used
+     */
     public function ping()
     {
     }
@@ -117,6 +123,17 @@ class MandrillTransport implements Swift_Transport
     }
 
 
+    public function setLogger(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
+    }
+
+    public function getLogger()
+    {
+        return $this->logger;
+    }
+
+
     /**
      * @param null|string $subAccount
      * @return $this
@@ -154,8 +171,27 @@ class MandrillTransport implements Swift_Transport
      */
     public function send(Swift_Mime_SimpleMessage $message, &$failedRecipients = null)
     {
+        if ($this->getLogger()) {
+            $this->getLogger()->info(self::class, [
+                'message' => 'Init sending message via mandrill',
+                'subject' => $message->getSubject(),
+                'sender' => $message->getSender(),
+                'from' => $message->getFrom(),
+                'cc' => $message->getCc(),
+                'to' => $message->getTo()
+            ]);
+        }
+
         $this->resultApi = null;
         if ($event = $this->dispatcher->createSendEvent($this, $message)) {
+            $this->getLogger()->info(self::class, [
+                'message' => 'Something went wrong, message is not sent',
+                'subject' => $message->getSubject(),
+                'sender' => $message->getSender(),
+                'from' => $message->getFrom(),
+                'cc' => $message->getCc(),
+                'to' => $message->getTo()
+            ]);
             $this->dispatcher->dispatchEvent($event, 'beforeSendPerformed');
             if ($event->bubbleCancelled()) {
                 return 0;
@@ -171,6 +207,15 @@ class MandrillTransport implements Swift_Transport
         $this->resultApi = $mandrill->messages->send($mandrillMessage, $this->async);
 
         foreach ($this->resultApi as $item) {
+            $this->getLogger()->info(self::class, [
+                'message' => 'Something went wrong, message is not sent',
+                'subject' => $message->getSubject(),
+                'sender' => $message->getSender(),
+                'from' => $message->getFrom(),
+                'cc' => $message->getCc(),
+                'to' => $message->getTo(),
+                'mandrilApiInfo' => $item,
+            ]);
             if ($item['status'] === 'sent' || $item['status'] === 'queued') {
                 $sendCount++;
             } else {
@@ -178,6 +223,18 @@ class MandrillTransport implements Swift_Transport
             }
         }
 
+        if ($this->getLogger()) {
+            $this->getLogger()->info(self::class, [
+                'message' => 'Something went wrong, message is not sent',
+                'subject' => $message->getSubject(),
+                'sender' => $message->getSender(),
+                'from' => $message->getFrom(),
+                'cc' => $message->getCc(),
+                'to' => $message->getTo(),
+                'countSent' => 0,
+                'failedEmails' => $failedRecipients
+            ]);
+        }
         if ($event) {
             if ($sendCount > 0) {
                 $event->setResult(Swift_Events_SendEvent::RESULT_SUCCESS);
@@ -272,8 +329,8 @@ class MandrillTransport implements Swift_Transport
         foreach ($toAddresses as $toEmail => $toName) {
             $to[] = array(
                 'email' => $toEmail,
-                'name'  => $toName,
-                'type'  => 'to'
+                'name' => $toName,
+                'type' => 'to'
             );
         }
 
@@ -288,16 +345,16 @@ class MandrillTransport implements Swift_Transport
         foreach ($ccAddresses as $ccEmail => $ccName) {
             $to[] = array(
                 'email' => $ccEmail,
-                'name'  => $ccName,
-                'type'  => 'cc'
+                'name' => $ccName,
+                'type' => 'cc'
             );
         }
 
         foreach ($bccAddresses as $bccEmail => $bccName) {
             $to[] = array(
                 'email' => $bccEmail,
-                'name'  => $bccName,
-                'type'  => 'bcc'
+                'name' => $bccName,
+                'type' => 'bcc'
             );
         }
 
@@ -314,14 +371,14 @@ class MandrillTransport implements Swift_Transport
         foreach ($message->getChildren() as $child) {
             if ($child instanceof \Swift_Image) {
                 $images[] = array(
-                    'type'    => $child->getContentType(),
-                    'name'    => $child->getId(),
+                    'type' => $child->getContentType(),
+                    'name' => $child->getId(),
                     'content' => base64_encode($child->getBody()),
                 );
-            } elseif ($child instanceof Swift_Attachment && ! ($child instanceof \Swift_Image)) {
+            } elseif ($child instanceof Swift_Attachment && !($child instanceof \Swift_Image)) {
                 $attachments[] = array(
-                    'type'    => $child->getContentType(),
-                    'name'    => $child->getFilename(),
+                    'type' => $child->getContentType(),
+                    'name' => $child->getFilename(),
                     'content' => base64_encode($child->getBody())
                 );
             } elseif ($child instanceof Swift_MimePart && $this->supportsContentType($child->getContentType())) {
@@ -334,14 +391,14 @@ class MandrillTransport implements Swift_Transport
         }
 
         $mandrillMessage = array(
-            'html'       => $bodyHtml,
-            'text'       => $bodyText,
-            'subject'    => $message->getSubject(),
+            'html' => $bodyHtml,
+            'text' => $bodyText,
+            'subject' => $message->getSubject(),
             'from_email' => $fromEmails[0],
-            'from_name'  => $fromAddresses[$fromEmails[0]],
-            'to'         => $to,
-            'headers'    => $headers,
-            'tags'       => $tags,
+            'from_name' => $fromAddresses[$fromEmails[0]],
+            'to' => $to,
+            'headers' => $headers,
+            'tags' => $tags,
             'inline_css' => null
         );
 
@@ -372,16 +429,16 @@ class MandrillTransport implements Swift_Transport
                         break;
                     case 'X-MC-Autotext':
                         $autoText = $header->getValue();
-                        if (in_array($autoText, array('true','on','yes','y', true), true)) {
+                        if (in_array($autoText, array('true', 'on', 'yes', 'y', true), true)) {
                             $mandrillMessage['auto_text'] = true;
                         }
-                        if (in_array($autoText, array('false','off','no','n', false), true)) {
+                        if (in_array($autoText, array('false', 'off', 'no', 'n', false), true)) {
                             $mandrillMessage['auto_text'] = false;
                         }
                         break;
                     case 'X-MC-GoogleAnalytics':
                         $analyticsDomains = explode(',', $header->getValue());
-                        if(is_array($analyticsDomains)) {
+                        if (is_array($analyticsDomains)) {
                             $mandrillMessage['google_analytics_domains'] = $analyticsDomains;
                         }
                         break;
@@ -404,7 +461,7 @@ class MandrillTransport implements Swift_Transport
         if ($this->getSubaccount()) {
             $mandrillMessage['subaccount'] = $this->getSubaccount();
         }
-
+        $this->getLogger()->info(self::class, ['mandrillMessage' => $mandrillMessage]);
         return $mandrillMessage;
     }
 
