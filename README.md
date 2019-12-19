@@ -10,7 +10,7 @@ If you'd like us to implement more [Mandrill-specific features](https://mandrill
 
 Require the package with composer
 
-    composer require accord/mandrill-swiftmailer
+    composer require nyatmeat/mandrill-swiftmailer
 
 ## Usage Example
 
