@@ -461,9 +461,7 @@ class MandrillTransport implements Swift_Transport
         if ($this->getSubaccount()) {
             $mandrillMessage['subaccount'] = $this->getSubaccount();
         }
-        if($this->getLogger()) {
-            $this->getLogger()->info(self::class, ['mandrillMessage' => $mandrillMessage]);
-        }
+
         return $mandrillMessage;
     }
 
