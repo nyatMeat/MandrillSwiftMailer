@@ -2,7 +2,7 @@
     "name": "nyatmeat/mandrill-swiftmailer",
     "description": "A SwiftMailer transport implementation for Mandrill",
     "keywords": ["mandrill", "swiftmailer"],
-    "homepage": "https://github.com/AccordGroup/MandrillSwiftMailer",
+    "homepage": "https://github.com/nyatmeat/MandrillSwiftMailer",
     "type": "library",
     "license": "GPL-2.0+",
     "authors": [
