@@ -1,5 +1,5 @@
 {
-    "name": "accord/mandrill-swiftmailer",
+    "name": "nyatmeat/mandrill-swiftmailer",
     "description": "A SwiftMailer transport implementation for Mandrill",
     "keywords": ["mandrill", "swiftmailer"],
     "homepage": "https://github.com/AccordGroup/MandrillSwiftMailer",
